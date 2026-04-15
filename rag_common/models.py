@@ -45,3 +45,7 @@ class RetrievalResult(BaseModel):
     # "dense" | "bm25" | "hybrid" — preserved so callers can filter or log by
     # retriever type without needing to re-run retrieval.
     retriever_type: str
+    retrieval_latency_ms: float | None = None
+    # Wall-clock time for the single retrieve() call that produced this result.
+    # None when the caller does not instrument latency. Downstream callers can
+    # aggregate across results to get p50/p95 without adding their own timing.
