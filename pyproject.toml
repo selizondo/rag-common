@@ -16,7 +16,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "pytest-cov"]
+dev = ["pytest>=7.0", "pytest-cov", "ipykernel>=6.0", "pandas>=2.0", "matplotlib>=3.7"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["rag_common"]
+
+[tool.uv]
+constraint-dependencies = [
+  "torch<2.3 ; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+]

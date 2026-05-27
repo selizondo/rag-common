@@ -1,11 +1,11 @@
 # rag_common
 
-Shared library for the RAG pipeline mini-projects.
+Shared library for the RAG pipeline projects.
 
 Both downstream projects depend on this package as an editable path install:
 
-- **rag_pipeline_systematic_evals** (P3) — single-PDF grid search with synthetic QA evaluation
-- **rag_pipeline_experimentation** (P4) — multi-paper QA assistant with real ground truth (qrels.json), citations, and a Streamlit UI
+- **rag_pipeline_systematic_evals** — single-PDF grid search with synthetic QA evaluation
+- **rag_pipeline_experimentation**  — multi-paper QA assistant with real ground truth (qrels.json), citations, and a Streamlit UI
 
 Centralising these modules means IR metric bugs are fixed once, chunk IDs are always UUID-based, and score normalisation logic never drifts between projects.
 
@@ -194,5 +194,5 @@ pytest tests/ -v
 
 | Project | Adds |
 |---|---|
-| `rag_pipeline_systematic_evals` (P3) | OpenAI embedder, pdfplumber parser, synthetic QA generator, grid search, visualiser |
-| `rag_pipeline_experimentation` (P4) | SentenceTransformers embedder, PyMuPDF parser, recursive/sliding-window chunkers, LLM generator + citations, qrels evaluator, Streamlit UI |
+| `rag_pipeline_systematic_evals` | OpenAI embedder, pdfplumber parser, synthetic QA generator, grid search, visualiser |
+| `rag_pipeline_experimentation`  | SentenceTransformers embedder, PyMuPDF parser, recursive/sliding-window chunkers, LLM generator + citations, qrels evaluator, Streamlit UI |
