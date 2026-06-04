@@ -32,6 +32,7 @@ import math
 # Per-query metrics
 # ---------------------------------------------------------------------------
 
+
 def recall_at_k(retrieved_ids: list[str], relevant_ids: set[str], k: int) -> float:
     """Fraction of relevant chunks found in the top-k results."""
     if not relevant_ids:
@@ -139,6 +140,7 @@ def mean_ndcg_at_k(query_results: QueryResults, k: int) -> float:
 # ---------------------------------------------------------------------------
 # Convenience wrapper: evaluate a full retrieval run
 # ---------------------------------------------------------------------------
+
 
 def evaluate(query_results: QueryResults, k: int = 5) -> dict[str, float]:
     """

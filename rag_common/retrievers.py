@@ -43,6 +43,7 @@ from rag_common.vector_store import VectorStoreProtocol
 # Protocol
 # ---------------------------------------------------------------------------
 
+
 @runtime_checkable
 class RetrieverProtocol(Protocol):
     """Structural interface for all retriever backends."""
@@ -55,6 +56,7 @@ class RetrieverProtocol(Protocol):
 # ---------------------------------------------------------------------------
 # BM25Retriever
 # ---------------------------------------------------------------------------
+
 
 class BM25Retriever:
     """
@@ -105,6 +107,7 @@ class BM25Retriever:
 # DenseRetriever
 # ---------------------------------------------------------------------------
 
+
 class DenseRetriever:
     """
     Embedding-based semantic retrieval backed by any VectorStoreProtocol.
@@ -126,8 +129,8 @@ class DenseRetriever:
         self._embed_fn = embed_fn
 
     def retrieve(self, query: str, top_k: int) -> list[RetrievalResult]:
-        embedding = self._embed_fn([query])           # (1, D)
-        query_vec = np.array(embedding).flatten()     # (D,)
+        embedding = self._embed_fn([query])  # (1, D)
+        query_vec = np.array(embedding).flatten()  # (D,)
         return self._store.search(query_vec, top_k)
 
     def __len__(self) -> int:
@@ -137,6 +140,7 @@ class DenseRetriever:
 # ---------------------------------------------------------------------------
 # Score fusion helpers
 # ---------------------------------------------------------------------------
+
 
 def _min_max_normalise(scores: dict[str, float]) -> dict[str, float]:
     """Scale scores to [0, 1]. Returns unchanged dict if all scores are equal."""
@@ -154,6 +158,7 @@ def _min_max_normalise(scores: dict[str, float]) -> dict[str, float]:
 # ---------------------------------------------------------------------------
 # HybridRetriever
 # ---------------------------------------------------------------------------
+
 
 class HybridRetriever:
     """
@@ -189,11 +194,14 @@ class HybridRetriever:
         bm25_results = self._bm25.retrieve(query, fetch_k)
 
         # Build score maps keyed by chunk ID string.
-        dense_scores: dict[str, float] = {r.chunk.id_str(): r.score for r in dense_results}
-        bm25_scores: dict[str, float] = {r.chunk.id_str(): r.score for r in bm25_results}
+        dense_scores: dict[str, float] = {
+            r.chunk.id_str(): r.score for r in dense_results
+        }
+        bm25_scores: dict[str, float] = {
+            r.chunk.id_str(): r.score for r in bm25_results
+        }
         chunk_by_id: dict[str, Chunk] = {
-            r.chunk.id_str(): r.chunk
-            for r in dense_results + bm25_results
+            r.chunk.id_str(): r.chunk for r in dense_results + bm25_results
         }
 
         # Union of all candidate IDs; missing side gets 0.0.

@@ -24,12 +24,12 @@ class Chunk(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     content: str
     chunk_index: int
-    method: str | None = None        # "fixed_size" | "sentence" | "semantic" | …
+    method: str | None = None  # "fixed_size" | "sentence" | "semantic" | …
     page_number: int | None = None
     start_char: int | None = None
     end_char: int | None = None
-    document_id: str | None = None   # ties chunk to a source document (P4)
-    source: str | None = None        # filename / paper ID (P4)
+    document_id: str | None = None  # ties chunk to a source document (P4)
+    source: str | None = None  # filename / paper ID (P4)
     metadata: dict = Field(default_factory=dict)
     # Populated only when serialising chunks with their vectors for disk caching.
     # Do not use for in-memory retrieval — read from FAISSVectorStore instead.

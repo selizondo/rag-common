@@ -15,15 +15,16 @@ from rag_common import metrics
 # ---------------------------------------------------------------------------
 
 RETRIEVED = ["a", "b", "c", "d", "e"]  # ranked best → worst
-RELEVANT_1 = {"a"}          # first result is relevant
-RELEVANT_2 = {"b", "d"}     # 2nd and 4th are relevant
-RELEVANT_NONE = {"z"}       # nothing retrieved is relevant
+RELEVANT_1 = {"a"}  # first result is relevant
+RELEVANT_2 = {"b", "d"}  # 2nd and 4th are relevant
+RELEVANT_NONE = {"z"}  # nothing retrieved is relevant
 RELEVANT_ALL = {"a", "b", "c", "d", "e"}
 
 
 # ---------------------------------------------------------------------------
 # recall_at_k
 # ---------------------------------------------------------------------------
+
 
 class TestRecallAtK:
     def test_perfect_recall(self):
@@ -46,6 +47,7 @@ class TestRecallAtK:
 # ---------------------------------------------------------------------------
 # precision_at_k
 # ---------------------------------------------------------------------------
+
 
 class TestPrecisionAtK:
     def test_perfect_precision(self):
@@ -71,6 +73,7 @@ class TestPrecisionAtK:
 # reciprocal_rank
 # ---------------------------------------------------------------------------
 
+
 class TestReciprocalRank:
     def test_first_position(self):
         assert metrics.reciprocal_rank(RETRIEVED, RELEVANT_1) == pytest.approx(1.0)
@@ -93,6 +96,7 @@ class TestReciprocalRank:
 # ---------------------------------------------------------------------------
 # average_precision
 # ---------------------------------------------------------------------------
+
 
 class TestAveragePrecision:
     def test_single_relevant_first(self):
@@ -123,6 +127,7 @@ class TestAveragePrecision:
 # ndcg_at_k
 # ---------------------------------------------------------------------------
 
+
 class TestNdcgAtK:
     def test_perfect_ndcg(self):
         # single relevant at rank 1 → DCG = IDCG = 1/log2(2) = 1.0
@@ -143,7 +148,9 @@ class TestNdcgAtK:
         dcg = 1 / math.log2(3) + 1 / math.log2(5)
         idcg = 1 / math.log2(2) + 1 / math.log2(3)
         expected = dcg / idcg
-        assert metrics.ndcg_at_k(RETRIEVED, RELEVANT_2, k=5) == pytest.approx(expected, rel=1e-6)
+        assert metrics.ndcg_at_k(RETRIEVED, RELEVANT_2, k=5) == pytest.approx(
+            expected, rel=1e-6
+        )
 
     def test_empty_relevant(self):
         assert metrics.ndcg_at_k(RETRIEVED, set(), k=5) == 0.0
@@ -152,6 +159,7 @@ class TestNdcgAtK:
 # ---------------------------------------------------------------------------
 # Aggregate: mrr, map_score
 # ---------------------------------------------------------------------------
+
 
 class TestMRR:
     def test_single_query_first(self):
@@ -186,6 +194,7 @@ class TestMAPScore:
 # ---------------------------------------------------------------------------
 # evaluate() convenience wrapper
 # ---------------------------------------------------------------------------
+
 
 class TestEvaluate:
     def test_keys_present(self):

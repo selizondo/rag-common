@@ -30,6 +30,7 @@ def parse_pdf(path: Path) -> tuple[str, int]:
     """
     try:
         import fitz  # PyMuPDF
+
         doc = fitz.open(str(path))
         pages = [page.get_text() for page in doc]
         doc.close()

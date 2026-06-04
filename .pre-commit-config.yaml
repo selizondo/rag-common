@@ -33,3 +33,18 @@ repos:
         exclude: '\.json$'
       - id: trailing-whitespace
         exclude: '\.md$'
+
+  # Ruff — linter + formatter (replaces Black + flake8)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # MyPy — static type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        args: [--ignore-missing-imports, --no-strict-optional]

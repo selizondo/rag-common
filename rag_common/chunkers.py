@@ -33,6 +33,7 @@ from rag_common.models import Chunk
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     """Cosine similarity between two 1-D vectors."""
     denom = np.linalg.norm(a) * np.linalg.norm(b)
@@ -50,6 +51,7 @@ def _split_sentences(text: str) -> list[str]:
     """
     try:
         import nltk
+
         try:
             return nltk.sent_tokenize(text)
         except LookupError:
@@ -64,6 +66,7 @@ def _split_sentences(text: str) -> list[str]:
 # ---------------------------------------------------------------------------
 # FixedSizeChunker
 # ---------------------------------------------------------------------------
+
 
 class FixedSizeChunker:
     """
@@ -101,18 +104,20 @@ class FixedSizeChunker:
 
             content = text[start:end].strip()
             if content:
-                chunks.append(Chunk(
-                    content=content,
-                    chunk_index=idx,
-                    method="fixed_size",
-                    start_char=start,
-                    end_char=end,
-                    metadata={
-                        "chunk_size": self.chunk_size,
-                        "overlap": self.overlap,
-                        **metadata,
-                    },
-                ))
+                chunks.append(
+                    Chunk(
+                        content=content,
+                        chunk_index=idx,
+                        method="fixed_size",
+                        start_char=start,
+                        end_char=end,
+                        metadata={
+                            "chunk_size": self.chunk_size,
+                            "overlap": self.overlap,
+                            **metadata,
+                        },
+                    )
+                )
                 idx += 1
 
             # Advance by (chunk_size - overlap), but at least 1 char to avoid
@@ -127,6 +132,7 @@ class FixedSizeChunker:
 # SentenceBasedChunker
 # ---------------------------------------------------------------------------
 
+
 class SentenceBasedChunker:
     """
     Groups consecutive sentences into chunks with sentence-level overlap.
@@ -136,7 +142,9 @@ class SentenceBasedChunker:
         overlap_sentences:   how many trailing sentences carry over to the next chunk
     """
 
-    def __init__(self, sentences_per_chunk: int = 5, overlap_sentences: int = 1) -> None:
+    def __init__(
+        self, sentences_per_chunk: int = 5, overlap_sentences: int = 1
+    ) -> None:
         if overlap_sentences >= sentences_per_chunk:
             raise ValueError("overlap_sentences must be less than sentences_per_chunk")
         self.sentences_per_chunk = sentences_per_chunk
@@ -154,18 +162,20 @@ class SentenceBasedChunker:
             window = sentences[pos : pos + self.sentences_per_chunk]
             content = " ".join(window).strip()
             if content:
-                chunks.append(Chunk(
-                    content=content,
-                    chunk_index=idx,
-                    method="sentence",
-                    metadata={
-                        "sentences_per_chunk": self.sentences_per_chunk,
-                        "overlap_sentences": self.overlap_sentences,
-                        "sentence_start": pos,
-                        "sentence_end": pos + len(window),
-                        **metadata,
-                    },
-                ))
+                chunks.append(
+                    Chunk(
+                        content=content,
+                        chunk_index=idx,
+                        method="sentence",
+                        metadata={
+                            "sentences_per_chunk": self.sentences_per_chunk,
+                            "overlap_sentences": self.overlap_sentences,
+                            "sentence_start": pos,
+                            "sentence_end": pos + len(window),
+                            **metadata,
+                        },
+                    )
+                )
                 idx += 1
             pos += step
 
@@ -175,6 +185,7 @@ class SentenceBasedChunker:
 # ---------------------------------------------------------------------------
 # SemanticChunker
 # ---------------------------------------------------------------------------
+
 
 class SemanticChunker:
     """
@@ -215,12 +226,17 @@ class SemanticChunker:
 
         if len(sentences) <= 1:
             if sentences:
-                return [Chunk(
-                    content=sentences[0],
-                    chunk_index=0,
-                    method="semantic",
-                    metadata={"breakpoint_threshold": self.breakpoint_threshold, **metadata},
-                )]
+                return [
+                    Chunk(
+                        content=sentences[0],
+                        chunk_index=0,
+                        method="semantic",
+                        metadata={
+                            "breakpoint_threshold": self.breakpoint_threshold,
+                            **metadata,
+                        },
+                    )
+                ]
             return []
 
         embeddings = self.embed_fn(sentences)  # shape (N, D)
@@ -241,17 +257,19 @@ class SemanticChunker:
         for idx, (start, end) in enumerate(zip(boundaries, boundaries[1:])):
             content = " ".join(sentences[start:end]).strip()
             if content:
-                chunks.append(Chunk(
-                    content=content,
-                    chunk_index=idx,
-                    method="semantic",
-                    metadata={
-                        "breakpoint_threshold": self.breakpoint_threshold,
-                        "sentence_start": start,
-                        "sentence_end": end,
-                        **metadata,
-                    },
-                ))
+                chunks.append(
+                    Chunk(
+                        content=content,
+                        chunk_index=idx,
+                        method="semantic",
+                        metadata={
+                            "breakpoint_threshold": self.breakpoint_threshold,
+                            "sentence_start": start,
+                            "sentence_end": end,
+                            **metadata,
+                        },
+                    )
+                )
 
         return chunks
 
@@ -259,6 +277,7 @@ class SemanticChunker:
 # ---------------------------------------------------------------------------
 # RecursiveChunker
 # ---------------------------------------------------------------------------
+
 
 class RecursiveChunker:
     """
@@ -298,7 +317,11 @@ class RecursiveChunker:
                 content=c,
                 chunk_index=i,
                 method="recursive",
-                metadata={"chunk_size": self.chunk_size, "overlap": self.overlap, **metadata},
+                metadata={
+                    "chunk_size": self.chunk_size,
+                    "overlap": self.overlap,
+                    **metadata,
+                },
             )
             for i, c in enumerate(merged)
             if c.strip()
@@ -353,6 +376,7 @@ class RecursiveChunker:
 # SlidingWindowChunker
 # ---------------------------------------------------------------------------
 
+
 class SlidingWindowChunker:
     """
     Sliding window over sentences with configurable window size and step.
@@ -385,18 +409,20 @@ class SlidingWindowChunker:
             window = sentences[pos : pos + self.window_size]
             content = " ".join(window).strip()
             if content:
-                chunks.append(Chunk(
-                    content=content,
-                    chunk_index=idx,
-                    method="sliding_window",
-                    metadata={
-                        "window_size": self.window_size,
-                        "step": self.step,
-                        "sentence_start": pos,
-                        "sentence_end": pos + len(window),
-                        **metadata,
-                    },
-                ))
+                chunks.append(
+                    Chunk(
+                        content=content,
+                        chunk_index=idx,
+                        method="sliding_window",
+                        metadata={
+                            "window_size": self.window_size,
+                            "step": self.step,
+                            "sentence_start": pos,
+                            "sentence_end": pos + len(window),
+                            **metadata,
+                        },
+                    )
+                )
                 idx += 1
 
         return chunks

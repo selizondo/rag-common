@@ -50,7 +50,9 @@ def _deterministic_embed(sentences: list[str]) -> np.ndarray:
     return vecs / norms
 
 
-def _build_dense_retriever(chunks: list[Chunk] | None = None) -> tuple[DenseRetriever, list[Chunk]]:
+def _build_dense_retriever(
+    chunks: list[Chunk] | None = None,
+) -> tuple[DenseRetriever, list[Chunk]]:
     chunks = chunks or _make_chunks()
     embeddings = _deterministic_embed([ch.content for ch in chunks])
     store = InMemoryVectorStore()
@@ -71,6 +73,7 @@ def _build_hybrid_retriever(
 # Protocol checks
 # ---------------------------------------------------------------------------
 
+
 class TestRetrieverProtocol:
     def test_bm25_satisfies_protocol(self):
         assert isinstance(BM25Retriever(_make_chunks()), RetrieverProtocol)
@@ -85,12 +88,14 @@ class TestRetrieverProtocol:
     def test_incomplete_class_fails(self):
         class Bad:
             pass
+
         assert not isinstance(Bad(), RetrieverProtocol)
 
 
 # ---------------------------------------------------------------------------
 # BM25Retriever
 # ---------------------------------------------------------------------------
+
 
 class TestBM25Retriever:
     def test_returns_results(self):
@@ -145,6 +150,7 @@ class TestBM25Retriever:
 # DenseRetriever
 # ---------------------------------------------------------------------------
 
+
 class TestDenseRetriever:
     def test_returns_results(self):
         dense, _ = _build_dense_retriever()
@@ -196,6 +202,7 @@ class TestDenseRetriever:
 # ---------------------------------------------------------------------------
 # HybridRetriever
 # ---------------------------------------------------------------------------
+
 
 class TestHybridRetriever:
     def test_returns_results(self):
@@ -273,6 +280,7 @@ class TestHybridRetriever:
 # ---------------------------------------------------------------------------
 # _min_max_normalise helper
 # ---------------------------------------------------------------------------
+
 
 class TestMinMaxNormalise:
     def test_range_zero_to_one(self):

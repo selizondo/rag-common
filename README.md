@@ -9,6 +9,22 @@ Both downstream projects depend on this package as an editable path install:
 
 Centralising these modules means IR metric bugs are fixed once, chunk IDs are always UUID-based, and score normalisation logic never drifts between projects.
 
+*See [docs/tradeoffs.md](docs/tradeoffs.md) for design decisions and [docs/failures.md](docs/failures.md) for known failure modes.*
+
+---
+
+## Key Concepts
+
+**Precision@K is capped at 1/K for single-ground-truth queries** — when each query has exactly one relevant chunk, the maximum achievable Precision@5 is 0.20. This is correct TREC/BEIR behaviour, not a bug. Use MRR and Recall@K as primary signals for this evaluation setup.
+
+**NDCG uses 1/log₂(rank+1)** — rank 1 gets full credit (log₂(2)=1), rank 2 gets 0.63, etc. The denominator is never zero. Standard TREC convention — matches BEIR benchmark scoring.
+
+**HybridRetriever alpha controls dense/sparse balance** — `alpha=1.0` is pure dense, `alpha=0.0` is pure BM25. Both sides are min-max normalised to [0,1] independently before fusion so the blend is meaningful even though BM25 scores are unbounded. `alpha=0.6` (60% dense, 40% BM25) is the empirically tuned default.
+
+**FAISSVectorStore uses IndexFlatIP with L2-normalised embeddings** — after L2 normalisation, inner product equals cosine similarity and scores land in [-1, 1]. This matches the scale HybridRetriever expects on the dense side. Cosine via dot product on normalised vectors is faster than `IndexFlatL2`.
+
+**VectorStoreProtocol is structural** — any class implementing `add`, `search`, `save`, `load`, `__len__` satisfies the Protocol without inheritance. Swap backends (FAISS → Qdrant) by implementing the interface, zero changes to retrieval code.
+
 ---
 
 ## Modules

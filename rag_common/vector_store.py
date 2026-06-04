@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import pickle
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 
@@ -45,6 +45,7 @@ from rag_common.models import Chunk, RetrievalResult
 # ---------------------------------------------------------------------------
 # Protocol (the "Interface")
 # ---------------------------------------------------------------------------
+
 
 @runtime_checkable
 class VectorStoreProtocol(Protocol):
@@ -97,6 +98,7 @@ class VectorStoreProtocol(Protocol):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _l2_normalise(matrix: np.ndarray) -> np.ndarray:
     """Row-wise L2 normalisation. Avoids division by zero for zero vectors."""
     norms = np.linalg.norm(matrix, axis=1, keepdims=True)
@@ -107,6 +109,7 @@ def _l2_normalise(matrix: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # FAISSVectorStore
 # ---------------------------------------------------------------------------
+
 
 class FAISSVectorStore:
     """
@@ -124,7 +127,7 @@ class FAISSVectorStore:
     """
 
     def __init__(self) -> None:
-        self._index = None   # lazily initialised on first add()
+        self._index: Any = None  # lazily initialised on first add()
         self._chunks: list[Chunk] = []
 
     # ------------------------------------------------------------------
@@ -160,11 +163,13 @@ class FAISSVectorStore:
         for score, idx in zip(scores[0], indices[0]):
             if idx < 0:  # FAISS returns -1 for empty slots
                 continue
-            results.append(RetrievalResult(
-                chunk=self._chunks[idx],
-                score=float(score),
-                retriever_type="dense",
-            ))
+            results.append(
+                RetrievalResult(
+                    chunk=self._chunks[idx],
+                    score=float(score),
+                    retriever_type="dense",
+                )
+            )
         return results
 
     def save(self, path: str) -> None:
@@ -191,6 +196,7 @@ class FAISSVectorStore:
 # ---------------------------------------------------------------------------
 # InMemoryVectorStore  (test / prototype use only)
 # ---------------------------------------------------------------------------
+
 
 class InMemoryVectorStore:
     """
@@ -226,8 +232,8 @@ class InMemoryVectorStore:
             return []
 
         q = _l2_normalise(query_embedding.reshape(1, -1).astype(np.float64))[0]
-        matrix = np.stack(self._embeddings)          # (N, D)
-        scores = matrix @ q                          # cosine sim (already normalised)
+        matrix = np.stack(self._embeddings)  # (N, D)
+        scores = matrix @ q  # cosine sim (already normalised)
 
         k = min(top_k, len(scores))
         top_indices = np.argpartition(scores, -k)[-k:]

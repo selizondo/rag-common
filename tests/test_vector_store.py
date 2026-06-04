@@ -11,8 +11,6 @@ when verifying that FAISSVectorStore returns equivalent results.
 
 from __future__ import annotations
 
-import pickle
-import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -31,6 +29,7 @@ from rag_common.vector_store import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_chunks(n: int) -> list[Chunk]:
     return [Chunk(content=f"chunk {i}", chunk_index=i) for i in range(n)]
 
@@ -44,6 +43,7 @@ def _random_embeddings(n: int, dim: int = 16, seed: int = 42) -> np.ndarray:
 # Protocol structural check
 # ---------------------------------------------------------------------------
 
+
 class TestProtocol:
     def test_faiss_satisfies_protocol(self):
         assert isinstance(FAISSVectorStore(), VectorStoreProtocol)
@@ -54,16 +54,20 @@ class TestProtocol:
     def test_arbitrary_class_with_methods_satisfies_protocol(self):
         class MinimalStore:
             def add(self, chunks, embeddings): ...
-            def search(self, query_embedding, top_k): return []
+            def search(self, query_embedding, top_k):
+                return []
+
             def save(self, path): ...
             def load(self, path): ...
-            def __len__(self): return 0
+            def __len__(self):
+                return 0
 
         assert isinstance(MinimalStore(), VectorStoreProtocol)
 
     def test_incomplete_class_fails_protocol(self):
         class BadStore:
             def add(self, chunks, embeddings): ...
+
             # missing search, save, load, __len__
 
         assert not isinstance(BadStore(), VectorStoreProtocol)
@@ -72,6 +76,7 @@ class TestProtocol:
 # ---------------------------------------------------------------------------
 # Shared contract tests — run against both backends
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(params=["faiss", "in_memory"])
 def store(request):
@@ -171,6 +176,7 @@ class TestVectorStoreContract:
 # FAISSVectorStore-specific tests
 # ---------------------------------------------------------------------------
 
+
 class TestFAISSVectorStore:
     def test_save_creates_faiss_and_pkl_files(self, tmp_path):
         store = FAISSVectorStore()
@@ -195,6 +201,7 @@ class TestFAISSVectorStore:
 # ---------------------------------------------------------------------------
 # InMemoryVectorStore-specific tests
 # ---------------------------------------------------------------------------
+
 
 class TestInMemoryVectorStore:
     def test_save_creates_npy_and_pkl(self, tmp_path):
@@ -224,6 +231,7 @@ class TestInMemoryVectorStore:
 # ---------------------------------------------------------------------------
 # _l2_normalise helper
 # ---------------------------------------------------------------------------
+
 
 class TestL2Normalise:
     def test_unit_norm_after_normalise(self):

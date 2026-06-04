@@ -53,6 +53,7 @@ def _stub_embed(sentences: list[str]) -> np.ndarray:
 # FixedSizeChunker
 # ---------------------------------------------------------------------------
 
+
 class TestFixedSizeChunker:
     def test_returns_list_of_chunks(self):
         c = FixedSizeChunker(chunk_size=50, overlap=10)
@@ -127,9 +128,12 @@ class TestFixedSizeChunker:
 # SentenceBasedChunker
 # ---------------------------------------------------------------------------
 
+
 class TestSentenceBasedChunker:
     def test_returns_chunks(self):
-        chunks = SentenceBasedChunker(sentences_per_chunk=3, overlap_sentences=1).chunk(PARA_TEXT)
+        chunks = SentenceBasedChunker(sentences_per_chunk=3, overlap_sentences=1).chunk(
+            PARA_TEXT
+        )
         assert len(chunks) > 0
         assert all(isinstance(ch, Chunk) for ch in chunks)
 
@@ -138,7 +142,9 @@ class TestSentenceBasedChunker:
         assert all(ch.method == "sentence" for ch in chunks)
 
     def test_sequential_indices(self):
-        chunks = SentenceBasedChunker(sentences_per_chunk=3, overlap_sentences=1).chunk(PARA_TEXT)
+        chunks = SentenceBasedChunker(sentences_per_chunk=3, overlap_sentences=1).chunk(
+            PARA_TEXT
+        )
         assert [ch.chunk_index for ch in chunks] == list(range(len(chunks)))
 
     def test_overlap_invalid_raises(self):
@@ -150,18 +156,24 @@ class TestSentenceBasedChunker:
         assert all(ch.metadata["doc"] == "x" for ch in chunks)
 
     def test_params_in_metadata(self):
-        chunks = SentenceBasedChunker(sentences_per_chunk=4, overlap_sentences=1).chunk(PARA_TEXT)
+        chunks = SentenceBasedChunker(sentences_per_chunk=4, overlap_sentences=1).chunk(
+            PARA_TEXT
+        )
         assert chunks[0].metadata["sentences_per_chunk"] == 4
         assert chunks[0].metadata["overlap_sentences"] == 1
 
     def test_sentence_boundaries_tracked(self):
-        chunks = SentenceBasedChunker(sentences_per_chunk=3, overlap_sentences=1).chunk(PARA_TEXT)
+        chunks = SentenceBasedChunker(sentences_per_chunk=3, overlap_sentences=1).chunk(
+            PARA_TEXT
+        )
         for ch in chunks:
             assert "sentence_start" in ch.metadata
             assert "sentence_end" in ch.metadata
 
     def test_short_text(self):
-        chunks = SentenceBasedChunker(sentences_per_chunk=5, overlap_sentences=1).chunk(SHORT_TEXT)
+        chunks = SentenceBasedChunker(sentences_per_chunk=5, overlap_sentences=1).chunk(
+            SHORT_TEXT
+        )
         assert len(chunks) >= 1
 
     def test_empty_text(self):
@@ -169,13 +181,16 @@ class TestSentenceBasedChunker:
         assert chunks == []
 
     def test_non_empty_content(self):
-        chunks = SentenceBasedChunker(sentences_per_chunk=3, overlap_sentences=1).chunk(PARA_TEXT)
+        chunks = SentenceBasedChunker(sentences_per_chunk=3, overlap_sentences=1).chunk(
+            PARA_TEXT
+        )
         assert all(ch.content.strip() for ch in chunks)
 
 
 # ---------------------------------------------------------------------------
 # SemanticChunker
 # ---------------------------------------------------------------------------
+
 
 class TestSemanticChunker:
     def test_returns_chunks(self):
@@ -226,6 +241,7 @@ class TestSemanticChunker:
     def test_all_text_covered(self):
         # Every sentence should appear in exactly one chunk.
         from rag_common.chunkers import _split_sentences
+
         sentences = _split_sentences(PARA_TEXT)
         chunks = SemanticChunker(_stub_embed, breakpoint_threshold=0.5).chunk(PARA_TEXT)
         combined = " ".join(ch.content for ch in chunks)
