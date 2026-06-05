@@ -67,7 +67,7 @@ Standard IR evaluation metrics operating on chunk ID strings, independent of any
 | `map_score(query_results)` | Mean Average Precision across all queries |
 | `evaluate(query_results, k)` | All metrics in one dict |
 
-**Precision@K note:** When each query has exactly one ground-truth chunk (P3 synthetic QA), Precision@K is capped at `1/K` — e.g. max 0.20 at K=5. Expected behaviour, not a bug. Use MRR and Recall@K as primary signals.
+**Precision@K note:** When each query has exactly one ground-truth chunk (synthetic QA with single-chunk relevance), Precision@K is capped at `1/K` — e.g. max 0.20 at K=5. Expected behaviour, not a bug. Use MRR and Recall@K as primary signals.
 
 **NDCG formula:** Standard TREC/BEIR convention — `1 / log2(rank + 1)` — so rank-1 gets full credit and the denominator is never zero.
 
