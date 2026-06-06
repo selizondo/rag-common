@@ -1,214 +1,39 @@
-# rag_common
+# rag-common
 
-Shared library for the RAG pipeline projects.
+![Tests](https://github.com/selizondo/rag-common/actions/workflows/ci.yml/badge.svg)
 
-Both downstream projects depend on this package as an editable path install:
+Shared library for the RAG pipeline projects. Chunkers, IR metrics, FAISS vector store, and hybrid retrieval: these primitives are identical across downstream projects, so they live in one place where an IR metric bug is fixed once and chunk IDs never collide between chunking configurations.
 
-- **[rag-pipeline-systematic-evals](https://github.com/selizondo/rag-pipeline-systematic-evals)** — single-PDF grid search with synthetic QA evaluation
-- **[rag-pipeline-experimentation](https://github.com/selizondo/rag-pipeline-experimentation)** — multi-paper QA assistant with real ground truth (qrels.json), citations, and a Streamlit UI
+**Stack:** Python · FAISS · rank-bm25 · NLTK · Pydantic
 
-Centralising these modules means IR metric bugs are fixed once, chunk IDs are always UUID-based, and score normalisation logic never drifts between projects.
+## What It Provides
 
-*See [docs/tradeoffs.md](docs/tradeoffs.md) for design decisions and [docs/failures.md](docs/failures.md) for known failure modes.*
+### IR metrics with hand-verified math
 
----
+`recall_at_k`, `precision_at_k`, `ndcg_at_k`, `mrr`, `map_score` — all operating on chunk ID strings, independent of any embedding library. 143 tests, including parametrized edge cases and hand-computed expected values. **Precision@K is correctly capped at 1/K for single-ground-truth queries** (max 0.20 at K=5): this is TREC/BEIR behavior, not a bug. MRR and Recall@K are the primary signals for this evaluation setup.
 
-## Key Concepts
+### Score fusion that doesn't let BM25 dominate
 
-**Precision@K is capped at 1/K for single-ground-truth queries** — when each query has exactly one relevant chunk, the maximum achievable Precision@5 is 0.20. This is correct TREC/BEIR behaviour, not a bug. Use MRR and Recall@K as primary signals for this evaluation setup.
+BM25 scores are unbounded floats. Dense scores are cosine similarities in [-1, 1]. Fusing without normalization makes alpha meaningless: a BM25 score of 12.4 overwhelms a dense score of 0.31, so you ask for 60% dense and get 90% dense in practice. `HybridRetriever` min-max normalizes both sides to [0, 1] independently before fusing, then applies alpha as its intended blend. The tradeoffs.md covers when to use RRF instead.
 
-**NDCG uses 1/log₂(rank+1)** — rank 1 gets full credit (log₂(2)=1), rank 2 gets 0.63, etc. The denominator is never zero. Standard TREC convention — matches BEIR benchmark scoring.
+### Protocol-based adapters
 
-**HybridRetriever alpha controls dense/sparse balance** — `alpha=1.0` is pure dense, `alpha=0.0` is pure BM25. Both sides are min-max normalised to [0,1] independently before fusion so the blend is meaningful even though BM25 scores are unbounded. `alpha=0.6` (60% dense, 40% BM25) is the empirically tuned default.
+`VectorStoreProtocol` and `RetrieverProtocol` are structural. Any class with the right methods qualifies without inheritance. Swap FAISS for Qdrant: add one file, change zero lines of retrieval code.
 
-**FAISSVectorStore uses IndexFlatIP with L2-normalised embeddings** — after L2 normalisation, inner product equals cosine similarity and scores land in [-1, 1]. This matches the scale HybridRetriever expects on the dense side. Cosine via dot product on normalised vectors is faster than `IndexFlatL2`.
+### Three chunkers, one interface
 
-**VectorStoreProtocol is structural** — any class implementing `add`, `search`, `save`, `load`, `__len__` satisfies the Protocol without inheritance. Swap backends (FAISS → Qdrant) by implementing the interface, zero changes to retrieval code.
+`FixedSizeChunker`, `SentenceBasedChunker`, `SemanticChunker` — all expose `.chunk(text, metadata={}) -> list[Chunk]`. Project-specific chunkers in each downstream repo follow the same interface.
 
----
-
-## Modules
-
-### `rag_common.models`
-
-Core Pydantic data types shared across both projects.
-
-| Class | Purpose |
-|---|---|
-| `Chunk` | A piece of text extracted from a PDF, with provenance metadata |
-| `RetrievalResult` | A retrieved chunk paired with its score and retriever type |
-
-**Key design decisions:**
-- Field is named `content` (not `text`) so both projects use the same field name.
-- `Chunk.id` is a UUID so chunk IDs from different chunking configs never collide even when `chunk_index` values overlap.
-- `Chunk.embedding` is `None` by default. Only populated when serialising chunks to disk for caching; in-memory retrieval reads from the FAISS index to avoid duplicating large float arrays.
-
-```python
-from rag_common.models import Chunk, RetrievalResult
-
-chunk = Chunk(content="Neural networks learn via backprop.", chunk_index=0, method="fixed_size")
-print(chunk.id_str())   # "3f2a1b…"
-```
+**Used by:**
+- [rag-pipeline-systematic-evals](https://github.com/selizondo/rag-pipeline-systematic-evals): single-PDF grid search with synthetic QA evaluation
+- [rag-pipeline-experimentation](https://github.com/selizondo/rag-pipeline-experimentation): multi-paper QA assistant with real qrels, citations, and Streamlit UI
 
 ---
 
-### `rag_common.metrics`
+## Go Deeper
 
-Standard IR evaluation metrics operating on chunk ID strings, independent of any embedding library.
-
-| Function | Description |
-|---|---|
-| `recall_at_k(retrieved, relevant, k)` | Fraction of relevant chunks in top-k |
-| `precision_at_k(retrieved, relevant, k)` | Fraction of top-k that are relevant |
-| `reciprocal_rank(retrieved, relevant)` | 1 / rank of first relevant result |
-| `average_precision(retrieved, relevant)` | Area under precision-recall curve |
-| `ndcg_at_k(retrieved, relevant, k)` | Normalised Discounted Cumulative Gain |
-| `mrr(query_results)` | Mean Reciprocal Rank across all queries |
-| `map_score(query_results)` | Mean Average Precision across all queries |
-| `evaluate(query_results, k)` | All metrics in one dict |
-
-**Precision@K note:** When each query has exactly one ground-truth chunk (synthetic QA with single-chunk relevance), Precision@K is capped at `1/K` — e.g. max 0.20 at K=5. Expected behaviour, not a bug. Use MRR and Recall@K as primary signals.
-
-**NDCG formula:** Standard TREC/BEIR convention — `1 / log2(rank + 1)` — so rank-1 gets full credit and the denominator is never zero.
-
-```python
-from rag_common import metrics
-
-query_results = [
-    (["chunk-a", "chunk-b", "chunk-c"], {"chunk-a"}),
-    (["chunk-x", "chunk-a", "chunk-b"], {"chunk-a"}),
-]
-scores = metrics.evaluate(query_results, k=5)
-# {"recall@5": 1.0, "precision@5": 0.2, "mrr": 0.75, "map": 0.75, "ndcg@5": 1.0}
-```
-
----
-
-### `rag_common.chunkers`
-
-Three text splitting strategies, all exposing `.chunk(text, metadata={}) -> list[Chunk]`.
-
-| Class | Strategy | Key params |
-|---|---|---|
-| `FixedSizeChunker` | Character window, word-boundary aware | `chunk_size`, `overlap` |
-| `SentenceBasedChunker` | Groups N sentences with sentence-level overlap (NLTK) | `sentences_per_chunk`, `overlap_sentences` |
-| `SemanticChunker` | Splits at cosine-similarity drops between adjacent sentences | `embed_fn`, `breakpoint_threshold`, `max_sentences` |
-
-Project-specific chunkers (`RecursiveChunker`, `SlidingWindowChunker`) live in each project's `chunkers_ext.py` and follow the same interface.
-
-- **`FixedSizeChunker`** walks back to the nearest space before cutting — no mid-word splits. Actual chunk length may be up to one word shorter than `chunk_size`.
-- **`SentenceBasedChunker`** uses NLTK `punkt`; downloads corpus automatically on first use; falls back to a regex splitter if NLTK is unavailable.
-- **`SemanticChunker`** accepts any `embed_fn: Callable[[list[str]], np.ndarray]` — OpenAI, SentenceTransformers, or a test stub. `max_sentences` caps chunk size even when similarity never drops below the threshold.
-
-```python
-from rag_common.chunkers import FixedSizeChunker, SentenceBasedChunker, SemanticChunker
-
-chunks = FixedSizeChunker(chunk_size=512, overlap=64).chunk(text, metadata={"source": "paper.pdf"})
-chunks = SentenceBasedChunker(sentences_per_chunk=5, overlap_sentences=1).chunk(text)
-
-from sentence_transformers import SentenceTransformer
-model = SentenceTransformer("all-MiniLM-L6-v2")
-chunks = SemanticChunker(embed_fn=model.encode, breakpoint_threshold=0.65).chunk(text)
-```
-
----
-
-### `rag_common.vector_store`
-
-Protocol-based adapter — swap vector backends in one line.
-
-| Name | Role |
-|---|---|
-| `VectorStoreProtocol` | Structural Protocol (`@runtime_checkable`) — type-hint against this |
-| `FAISSVectorStore` | Production; IndexFlatIP + L2-normalised embeddings (cosine via inner product) |
-| `InMemoryVectorStore` | Tests / prototypes; brute-force cosine, no FAISS dependency |
-
-Any class implementing `add`, `search`, `save`, `load`, and `__len__` satisfies the Protocol — no inheritance required. Adding a Qdrant or Pinecone backend is a new class, zero changes to retrieval code.
-
-**Why IndexFlatIP?** After L2-normalisation, inner product equals cosine similarity and scores land in `[-1, 1]`, matching the scale `HybridRetriever` expects on the dense side.
-
-```python
-from rag_common.vector_store import FAISSVectorStore, InMemoryVectorStore, VectorStoreProtocol
-
-store: VectorStoreProtocol = FAISSVectorStore()       # prod
-store: VectorStoreProtocol = InMemoryVectorStore()    # tests
-store: VectorStoreProtocol = QdrantVectorStore(...)   # future — just implement the protocol
-
-store.add(chunks, embeddings)   # embeddings: np.ndarray (N, D)
-results = store.search(query_emb, top_k=5)
-store.save("data/indices/my_index")
-store.load("data/indices/my_index")
-```
-
----
-
-### `rag_common.retrievers`
-
-All retrievers satisfy `RetrieverProtocol`:
-
-```python
-results: list[RetrievalResult] = retriever.retrieve(query: str, top_k: int)
-```
-
-| Class | Strategy | Key params |
-|---|---|---|
-| `BM25Retriever` | Sparse keyword matching (rank-bm25) | `chunks` |
-| `DenseRetriever` | Embedding similarity via any `VectorStoreProtocol` | `store`, `embed_fn` |
-| `HybridRetriever` | Min-max normalised score fusion of dense + BM25 | `dense`, `bm25`, `alpha`, `fetch_k` |
-
-**Score fusion:** BM25 scores are unbounded positive floats; dense scores are cosine similarities in `[-1, 1]`. Fusing without normalisation lets BM25 dominate. `HybridRetriever` fetches `fetch_k = max(top_k * 3, 20)` candidates from each, min-max normalises both to `[0, 1]` independently, then fuses: `score = alpha * dense_norm + (1 - alpha) * bm25_norm`. Fused scores guaranteed in `[0, 1]`.
-
-```python
-from rag_common.retrievers import BM25Retriever, DenseRetriever, HybridRetriever
-from rag_common.vector_store import FAISSVectorStore
-
-store = FAISSVectorStore()
-store.add(chunks, embeddings)
-
-bm25   = BM25Retriever(chunks)
-dense  = DenseRetriever(store, embed_fn=model.encode)
-hybrid = HybridRetriever(dense, bm25, alpha=0.6)   # 60% dense, 40% BM25
-
-results = hybrid.retrieve("what is backpropagation?", top_k=5)
-```
-
----
-
-## Installation
-
-```bash
-pip install -e ../rag_common
-```
-
-Or via uv `pyproject.toml`:
-
-```toml
-[tool.uv.sources]
-rag-common = { path = "../rag_common", editable = true }
-
-[project]
-dependencies = ["rag-common", ...]
-```
-
----
-
-## Running tests
-
-```bash
-cd rag_common
-pip install -e ".[dev]"
-pytest tests/ -v
-```
-
-143 tests: metrics (hand-verified math), chunkers (deterministic stub embedder), vector store (parametrised against both FAISS and InMemory), retrievers (Protocol checks + alpha boundary tests).
-
----
-
-## Status
-
-`rag_common` is complete. Project-specific logic lives in each downstream project:
-
-| Project | Adds |
-|---|---|
-| [rag-pipeline-systematic-evals](https://github.com/selizondo/rag-pipeline-systematic-evals) | OpenAI embedder, pdfplumber parser, synthetic QA generator, grid search, visualiser |
-| [rag-pipeline-experimentation](https://github.com/selizondo/rag-pipeline-experimentation)  | SentenceTransformers embedder, PyMuPDF parser, recursive/sliding-window chunkers, LLM generator + citations, qrels evaluator, Streamlit UI |
+| Audience | Doc |
+|----------|-----|
+| Running the code | [Setup and Usage](docs/setup.md) |
+| Engineering decisions | [Design and Tradeoffs](docs/engineering.md) |
+| What breaks and why | [Failure Modes](docs/failures.md) |

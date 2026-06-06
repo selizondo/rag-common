@@ -26,7 +26,7 @@ No code fix needed. If multi-relevance evaluation is required, pass sets with mu
 `max_sentences` caps chunk size even when similarity never drops below `breakpoint_threshold`. If `max_sentences` is set, the chunker always produces bounded-size output regardless of similarity values.
 
 ### Fallback behavior
-Always set `max_sentences` in production. Use `InMemoryVectorStore` with a real embedding model in integration tests — a zero-variance stub won't exercise split logic.
+Always set `max_sentences` in production. Use `InMemoryVectorStore` with a real embedding model in integration tests: a zero-variance stub won't exercise split logic.
 
 ---
 
@@ -52,4 +52,4 @@ Delete and rebuild the index when changing embedding models. The index filename 
 `HybridRetriever` guards against zero-range normalisation: if `max - min == 0`, scores are set to 0.5 (neutral contribution). The guard is in `_normalize()` in `retrievers.py`.
 
 ### Fallback behavior
-The guard handles it silently. If BM25 consistently produces zero scores on a corpus, consider whether BM25 is useful for that data — semantic-only retrieval (`alpha=1.0`) may be more appropriate.
+The guard handles it silently. If BM25 consistently produces zero scores on a corpus, consider whether BM25 is useful for that data: semantic-only retrieval (`alpha=1.0`) may be more appropriate.
