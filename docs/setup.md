@@ -1,5 +1,17 @@
 # Setup and Usage
 
+## Key Concepts
+
+**IR metrics with hand-verified math:** `recall_at_k`, `precision_at_k`, `ndcg_at_k`, `mrr`, `map_score` operate on chunk ID strings independent of embedding library. 143 tests including hand-computed expected values. Precision@K correctly capped at 1/K for single ground truth (max 0.20@5): TREC/BEIR behavior.
+
+**Score fusion without dominance:** BM25 scores are unbounded floats; dense scores are [-1, 1]. Direct fusion makes alpha meaningless. `HybridRetriever` min-max normalizes both sides independently to [0, 1] before fusing, making alpha a true blend parameter. Alternatively, rank-based fusion (RRF) is outlier-resistant.
+
+**Protocol-based adapters:** `VectorStoreProtocol` and `RetrieverProtocol` are structural types. Any class with the right methods qualifies without inheritance. Swap FAISS for Qdrant: add one file, zero changes to retrieval code.
+
+**Three chunkers, one interface:** `FixedSizeChunker`, `SentenceBasedChunker`, `SemanticChunker` all expose `.chunk(text, metadata={}) -> list[Chunk]`. Project-specific chunkers in downstream repos follow the same interface.
+
+---
+
 ## Installation
 
 ```bash

@@ -6,6 +6,14 @@ Shared library for the RAG pipeline projects. Chunkers, IR metrics, FAISS vector
 
 **Stack:** Python · FAISS · rank-bm25 · NLTK · Pydantic
 
+## Related Projects
+
+Used by:
+- [rag-pipeline-systematic-evals](https://github.com/selizondo/rag-pipeline-systematic-evals) — single-PDF grid search with synthetic QA
+- [rag-pipeline-experimentation](https://github.com/selizondo/rag-pipeline-experimentation) — multi-paper QA with real qrels
+
+---
+
 ## What It Provides
 
 ### IR metrics with hand-verified math
@@ -23,12 +31,6 @@ BM25 scores are unbounded floats. Dense scores are cosine similarities in [-1, 1
 ### Three chunkers, one interface
 
 `FixedSizeChunker`, `SentenceBasedChunker`, `SemanticChunker` — all expose `.chunk(text, metadata={}) -> list[Chunk]`. Project-specific chunkers in each downstream repo follow the same interface.
-
-**Used by:**
-- [rag-pipeline-systematic-evals](https://github.com/selizondo/rag-pipeline-systematic-evals): single-PDF grid search with synthetic QA evaluation
-- [rag-pipeline-experimentation](https://github.com/selizondo/rag-pipeline-experimentation): multi-paper QA assistant with real qrels, citations, and Streamlit UI
-
----
 
 ## Go Deeper
 
